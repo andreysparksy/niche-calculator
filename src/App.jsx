@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 const MONTH_OPTIONS = [3, 6, 12];
 
@@ -37,14 +46,23 @@ function formatMoney(value) {
   }).format(value);
 }
 
-function buildProjection({ months, leadsPerMonth, cr2, cr3, avgCheck, warmRate, leadCost }) {
+function buildProjection({
+  months,
+  leadsPerMonth,
+  cr2,
+  cr3,
+  avgCheck,
+  warmRate,
+  leadCost,
+}) {
   const rows = [];
   let warmPool = 0;
 
   for (let month = 1; month <= months; month++) {
     const baseBefore = warmPool;
-    const dialogs = leadsPerMonth * (cr2 / 100);
-    const directSales = dialogs * (cr3 / 100);
+
+    const appointments = leadsPerMonth * (cr2 / 100);
+    const directSales = appointments * (cr3 / 100);
     const warmSales = warmPool * (warmRate / 100);
 
     const revenueDirect = directSales * avgCheck;
@@ -57,6 +75,8 @@ function buildProjection({ months, leadsPerMonth, cr2, cr3, avgCheck, warmRate, 
     rows.push({
       month: `М${month}`,
       base: Math.round(baseBefore),
+      appointments: Math.round(appointments),
+      sales: Math.round(directSales + warmSales),
       warmBuyers: Math.round(warmSales),
       direct: Math.round(revenueDirect),
       warm: Math.round(revenueWarm),
@@ -83,6 +103,7 @@ export default function App() {
 
   const applyPreset = (value) => {
     setSelectedNiche(value);
+
     if (value === "custom") {
       setNiche("Своя ниша");
       return;
@@ -115,6 +136,7 @@ export default function App() {
   const summary = useMemo(() => {
     const totalRevenue = chartData.reduce((sum, row) => sum + row.revenue, 0);
     const totalAdSpend = chartData.reduce((sum, row) => sum + row.adSpend, 0);
+
     return {
       totalRevenue,
       totalAdSpend,
@@ -192,7 +214,7 @@ export default function App() {
 
             <div className="field">
               <div className="field-top">
-                <label>CR заявка → диалог</label>
+                <label>CR заявка → запись</label>
                 <span>{cr2}%</span>
               </div>
               <input
@@ -207,7 +229,7 @@ export default function App() {
 
             <div className="field">
               <div className="field-top">
-                <label>CR диалог → продажа</label>
+                <label>Конверсия продаж</label>
                 <span>{cr3}%</span>
               </div>
               <input
@@ -273,10 +295,12 @@ export default function App() {
                 <div className="muted">Выручка</div>
                 <div className="big-number">{formatMoney(summary.totalRevenue)}</div>
               </div>
+
               <div className="card stat-card">
                 <div className="muted">Расход на рекламу</div>
                 <div className="big-number">{formatMoney(summary.totalAdSpend)}</div>
               </div>
+
               <div className="card stat-card">
                 <div className="muted">Прибыль</div>
                 <div className="big-number">{formatMoney(summary.profit)}</div>
@@ -286,8 +310,11 @@ export default function App() {
             <section className="card">
               <div className="card-head">
                 <h2>Доход по месяцам — {niche}</h2>
-                <p className="muted">Прямые продажи, догрев базы, общий доход и расходы на рекламу.</p>
+                <p className="muted">
+                  Прямые продажи, догрев базы, общий доход и расходы на рекламу.
+                </p>
               </div>
+
               <div className="chart-wrap">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
@@ -296,10 +323,35 @@ export default function App() {
                     <YAxis />
                     <Tooltip formatter={(value) => formatMoney(value)} />
                     <Legend />
-                    <Line type="monotone" dataKey="direct" name="Прямые продажи" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="warm" name="Догрев аудитории" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="revenue" name="Общий доход" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="adSpend" name="Расходы на рекламу" stroke="#dc2626" strokeWidth={3} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="direct"
+                      name="Прямые продажи"
+                      strokeWidth={3}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="warm"
+                      name="Догрев аудитории"
+                      strokeWidth={3}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      name="Общий доход"
+                      strokeWidth={3}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="adSpend"
+                      name="Расходы на рекламу"
+                      stroke="#dc2626"
+                      strokeWidth={3}
+                      dot={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -308,14 +360,19 @@ export default function App() {
             <section className="card">
               <div className="card-head">
                 <h2>Таблица экономики по месяцам</h2>
-                <p className="muted">База на начало месяца, покупки из базы, расходы и доход.</p>
+                <p className="muted">
+                  База на начало месяца, записи, продажи, покупки из базы, расходы и доход.
+                </p>
               </div>
+
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
                       <th>Месяц</th>
                       <th>Кол-во базы</th>
+                      <th>Кол-во записей</th>
+                      <th>Кол-во продаж</th>
                       <th>Сколько купят с базы</th>
                       <th>Расходы за месяц</th>
                       <th>Доход за месяц</th>
@@ -326,6 +383,8 @@ export default function App() {
                       <tr key={row.month}>
                         <td>{row.month}</td>
                         <td>{row.base}</td>
+                        <td>{row.appointments}</td>
+                        <td>{row.sales}</td>
                         <td>{row.warmBuyers}</td>
                         <td>{formatMoney(row.adSpend)}</td>
                         <td>{formatMoney(row.revenue)}</td>
@@ -340,237 +399,377 @@ export default function App() {
       </div>
 
       <style>{`
-* { box-sizing: border-box; }
+        * {
+          box-sizing: border-box;
+        }
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100%;
-  overflow-x: hidden;
-  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 40%, #eef2ff 100%);
-}
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          min-height: 100%;
+          overflow-x: hidden;
+          background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 40%, #eef2ff 100%);
+        }
 
-body {
-  font-family: Inter, Arial, sans-serif;
-  color: #0f172a;
-}
+        body {
+          font-family: Inter, Arial, sans-serif;
+          color: #0f172a;
+        }
 
-button, input, select {
-  font: inherit;
-  color: #0f172a;
-}
+        button, input, select {
+          font: inherit;
+          color: #0f172a;
+        }
 
-.page {
-  min-height: 100vh;
-  width: 100%;
-  padding: 40px 32px;
-  background: transparent;
-}
+        .page {
+          min-height: 100vh;
+          width: 100%;
+          padding: 40px 32px;
+          background: transparent;
+        }
 
-.container {
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-}
+        .container {
+          width: 100%;
+          max-width: 1440px;
+          margin: 0 auto;
+        }
 
-.hero {
-  margin-bottom: 32px;
-  text-align: center;
-}
+        .hero {
+          margin-bottom: 32px;
+          text-align: center;
+        }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 18px;
-  border-radius: 999px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-}
+        .badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 18px;
+          border-radius: 999px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          font-size: 14px;
+          font-weight: 600;
+          color: #0f172a;
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+        }
 
-h1 {
-  margin: 18px 0 12px;
-  font-size: 48px;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  color: #0f172a;
-}
+        h1 {
+          margin: 18px 0 12px;
+          font-size: 48px;
+          line-height: 1.05;
+          letter-spacing: -0.03em;
+          color: #0f172a;
+        }
 
-h2 {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.2;
-  color: #0f172a;
-}
+        h2 {
+          margin: 0;
+          font-size: 22px;
+          line-height: 1.2;
+          color: #0f172a;
+        }
 
-.hero-text,
-.muted {
-  color: #64748b;
-}
+        .hero-text,
+        .muted {
+          color: #64748b;
+        }
 
-.hero-text {
-  max-width: 820px;
-  margin: 0 auto;
-  font-size: 17px;
-  line-height: 1.6;
-  text-align: center;
-}
+        .hero-text {
+          max-width: 820px;
+          margin: 0 auto;
+          font-size: 17px;
+          line-height: 1.6;
+          text-align: center;
+        }
 
-.layout {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 28px;
-  align-items: start;
-}
+        .layout {
+          display: grid;
+          grid-template-columns: 380px minmax(0, 1fr);
+          gap: 28px;
+          align-items: start;
+        }
 
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
+        .content {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
 
-.card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 26px;
-  padding: 26px;
-  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
-}
+        .card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 26px;
+          padding: 26px;
+          box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+        }
 
-.sidebar {
-  position: sticky;
-  top: 20px;
-}
+        .sidebar {
+          position: sticky;
+          top: 20px;
+        }
 
-.card-head {
-  margin-bottom: 18px;
-}
+        .card-head {
+          margin-bottom: 18px;
+        }
 
-.field {
-  margin-top: 18px;
-}
+        .card-head p {
+          margin: 8px 0 0;
+          line-height: 1.5;
+        }
 
-.field label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #0f172a;
-}
+        .field {
+          margin-top: 18px;
+        }
 
-.field-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
+        .field label {
+          display: block;
+          font-size: 14px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #0f172a;
+        }
 
-.field-top span {
-  color: #475569;
-  font-size: 14px;
-  font-weight: 600;
-}
+        .field-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+        }
 
-.field input:not([type="range"]),
-.field select {
-  width: 100%;
-  padding: 13px 14px;
-  border-radius: 14px;
-  border: 1px solid #cbd5e1;
-  background: white;
-}
+        .field-top span {
+          color: #475569;
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+        }
 
-.field input[type="range"] {
-  width: 100%;
-  accent-color: #0f172a;
-}
+        .field input:not([type="range"]),
+        .field select {
+          width: 100%;
+          padding: 13px 14px;
+          border-radius: 14px;
+          border: 1px solid #cbd5e1;
+          background: white;
+          outline: none;
+        }
 
-.months {
-  display: flex;
-  gap: 10px;
-}
+        .field input[type="range"] {
+          width: 100%;
+          accent-color: #0f172a;
+        }
 
-.month-btn {
-  border: 1px solid #cbd5e1;
-  background: white;
-  border-radius: 14px;
-  padding: 10px 16px;
-  cursor: pointer;
-  color: #0f172a;
-}
+        .months {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
 
-.month-btn.active {
-  background: #0f172a;
-  color: white;
-  border-color: #0f172a;
-}
+        .month-btn {
+          border: 1px solid #cbd5e1;
+          background: white;
+          border-radius: 14px;
+          padding: 10px 16px;
+          cursor: pointer;
+          color: #0f172a;
+          transition: 0.2s ease;
+          flex: 1 1 90px;
+        }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
+        .month-btn.active {
+          background: #0f172a;
+          color: white;
+          border-color: #0f172a;
+        }
 
-.stat-card {
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
+        .stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 16px;
+        }
 
-.big-number {
-  margin-top: 10px;
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
+        .stat-card {
+          min-height: 120px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
 
-.chart-wrap {
-  width: 100%;
-  height: 520px;
-  margin-top: 10px;
-}
+        .big-number {
+          margin-top: 10px;
+          font-size: 30px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.15;
+          word-break: break-word;
+        }
 
-.table-wrap {
-  overflow-x: auto;
-  margin-top: 12px;
-}
+        .chart-wrap {
+          width: 100%;
+          height: 520px;
+          margin-top: 10px;
+        }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 760px;
-}
+        .table-wrap {
+          overflow-x: auto;
+          margin-top: 12px;
+          -webkit-overflow-scrolling: touch;
+        }
 
-th, td {
-  text-align: left;
-  padding: 14px 12px;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 14px;
-}
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 920px;
+        }
 
-th {
-  background: #f8fafc;
-  color: #334155;
-  font-weight: 700;
-}
+        th,
+        td {
+          text-align: left;
+          padding: 14px 12px;
+          border-bottom: 1px solid #e2e8f0;
+          font-size: 14px;
+          white-space: nowrap;
+        }
 
-@media (max-width: 1200px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { position: static; }
-}
+        th {
+          background: #f8fafc;
+          color: #334155;
+          font-weight: 700;
+          position: sticky;
+          top: 0;
+        }
 
-@media (max-width: 768px) {
-  .page { padding: 18px 16px; }
-  h1 { font-size: 34px; }
-  .stats { grid-template-columns: 1fr; }
-  .card { padding: 18px; border-radius: 22px; }
-  .chart-wrap { height: 380px; }
-}
-`}</style>
+        @media (max-width: 1200px) {
+          .layout {
+            grid-template-columns: 1fr;
+          }
+
+          .sidebar {
+            position: static;
+          }
+
+          .chart-wrap {
+            height: 460px;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .page {
+            padding: 20px 16px;
+          }
+
+          h1 {
+            font-size: 36px;
+          }
+
+          h2 {
+            font-size: 20px;
+          }
+
+          .hero-text {
+            font-size: 15px;
+          }
+
+          .stats {
+            grid-template-columns: 1fr;
+          }
+
+          .card {
+            padding: 18px;
+            border-radius: 20px;
+          }
+
+          .big-number {
+            font-size: 26px;
+          }
+
+          .chart-wrap {
+            height: 360px;
+          }
+
+          .field-top {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 4px;
+          }
+
+          .field-top span {
+            white-space: normal;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .page {
+            padding: 14px 12px;
+          }
+
+          .container {
+            max-width: 100%;
+          }
+
+          .hero {
+            margin-bottom: 20px;
+          }
+
+          .badge {
+            width: 100%;
+            padding: 10px 14px;
+            text-align: center;
+          }
+
+          h1 {
+            font-size: 30px;
+            margin: 14px 0 10px;
+          }
+
+          .hero-text {
+            font-size: 14px;
+            line-height: 1.5;
+          }
+
+          .layout {
+            gap: 16px;
+          }
+
+          .content {
+            gap: 16px;
+          }
+
+          .card {
+            padding: 16px;
+            border-radius: 18px;
+          }
+
+          .field {
+            margin-top: 14px;
+          }
+
+          .months {
+            gap: 8px;
+          }
+
+          .month-btn {
+            flex: 1 1 calc(33.333% - 8px);
+            padding: 10px 8px;
+            font-size: 14px;
+          }
+
+          .big-number {
+            font-size: 24px;
+          }
+
+          .chart-wrap {
+            height: 300px;
+          }
+
+          th,
+          td {
+            padding: 12px 10px;
+            font-size: 13px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
